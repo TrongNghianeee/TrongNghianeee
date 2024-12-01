@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/scripts.js" defer></script>
+    <title>Quản lý món ăn</title>
+</head>
+<body>
+    <header>
+        <nav>
+            <button class="bot" onclick="loadPartial('Bot-Telegram')">
+                <img src="/static/img/bot_telegram.png" alt="Bot Telegram"> Bot-Telegram
+            </button>
+            <button class="manager" onclick="loadPartial('ManagerDish')">
+                <img src="/static/img/Manager.png" alt="Manager"> Quản lý món ăn
+            </button>
+            <button class="model" onclick="loadPartial('Train-Model')">
+                <img src="/static/img/model_ai.png" alt="Model AI"> Train-Model
+            </button>
+            <button class="schedule" onclick="loadPartial('Setting')">
+                <img src="/static/img/schedule.png" alt="Schedule"> Đặt lịch update
+            </button>
+        </nav>
+    </header>
+    <main id="content-panel">
+        <!-- Nội dung động sẽ được tải vào đây -->
+    </main>
+</body>
+</html>

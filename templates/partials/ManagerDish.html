@@ -1,0 +1,40 @@
+<h2>Danh sách các món ăn</h2>
+
+<div class="scrollable-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Tên món ăn</th>
+                <th>Nguyên liệu</th>
+                <th>Cách chế biến</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dish in dishes %}
+            <tr onclick="selectRow(this)" data-id="{{ dish.IDMonAn }}"> <!-- Lưu trữ ID món ăn trong data-id -->
+                <td>{{ dish.MonAnTen }}</td>
+                <td>{{ dish.NguyenLieu }}</td>
+                <td>{{ dish.CachCheBien }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="form-container">
+    <!-- Các phần tử trong form -->
+    
+    <div class="form-row">
+        <label for="ten_mon_an">Tên món ăn:</label>
+        <input type="text" id="monAn" name="ten_mon_an">
+    </div>
+    <div class="form-row">
+        <label for="nguyen_lieu">Nguyên liệu:</label>
+        <input type="text" id="nguyenLieu" name="nguyen_lieu">
+    </div>
+    <div class="form-row">
+        <label for="cach_che_bien">Cách chế biến:</label>
+        <input type="text" id="cachCheBien" name="cach_che_bien">
+    </div>
+    <button onclick="addMonAn()">Thêm Món Ăn</button>
+</div>

@@ -1,0 +1,206 @@
+/* Đặt kiểu cho toàn bộ button */
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Khoảng cách giữa hình ảnh và chữ */
+    background-color: #4CAF50; /* Màu nền xanh cho button */
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #45a049; /* Màu nền khi hover */
+}
+
+button img {
+    width: 20px; /* Đặt kích thước cho hình ảnh */
+    height: 20px;
+}
+
+/* Kiểu cho menu */
+nav {
+    margin: 10px;
+}
+
+nav button {
+    background-color: #007bff; /* Màu nền cho button */
+    margin: 5px;
+    padding: 12px 24px;
+    font-size: 18px;
+    color: white;
+    border-radius: 8px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+nav button:hover {
+    background-color: #0056b3; /* Màu nền khi hover */
+}
+
+/* Kiểu cho các hình ảnh trong button */
+nav button img {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px; /* Khoảng cách giữa hình ảnh và chữ */
+}
+
+/* Các button có hình ảnh */
+button.schedule {
+    background-color: #f39c12;
+}
+
+button.schedule:hover {
+    background-color: #e67e22;
+}
+
+button.bot {
+    background-color: #3498db;
+}
+
+button.bot:hover {
+    background-color: #2980b9;
+}
+
+button.manager {
+    background-color: #2ecc71;
+}
+
+button.manager:hover {
+    background-color: #27ae60;
+}
+
+button.model {
+    background-color: #9b59b6;
+}
+
+button.model:hover {
+    background-color: #8e44ad;
+}
+
+
+.scrollable-table {
+    height: 350px; /* Chiều cao cố định */
+    overflow-y: scroll; /* Kích hoạt cuộn dọc */
+    border: 1px solid #ddd;
+    margin-top: 1rem;
+}
+
+.scrollable-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.scrollable-table th, .scrollable-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.scrollable-table th {
+    background-color: #f2f2f2;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+/* Hàng lẻ và chẵn xen kẽ màu */
+.scrollable-table tbody tr:nth-child(odd) {
+    background-color: #fff; /* Hàng trắng */
+}
+
+.scrollable-table tbody tr:nth-child(even) {
+    background-color: #D0E8C5; /* Hàng xám nhạt */
+}
+
+/* Hiệu ứng khi chọn dòng */
+.selected-row {
+    background-color: #cfe2f3; /* Màu nền khi chọn dòng */
+    color: #88C273; /* Màu chữ khi chọn dòng */
+}
+
+/* Hiệu ứng hover */
+/* Chỉnh giữa màn hình */
+.form-container {
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 400px; /* Giới hạn chiều rộng tối đa của form */
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Thêm hiệu ứng bóng đổ */
+}
+
+/* Căn chỉnh các label và input nằm ngang */
+.form-container {
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 400px; /* Giới hạn chiều rộng tối đa của form */
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Thêm hiệu ứng bóng đổ */
+}
+
+/* Căn chỉnh label và input nằm ngang */
+.form-row {
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    gap: 10px; /* Khoảng cách giữa label và input */
+}
+
+/* Label */
+.form-row label {
+    font-weight: bold;
+    width: 150px; /* Giới hạn chiều rộng của label */
+}
+
+/* Input */
+.form-row input {
+    padding: 10px;
+    font-size: 16px;
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+/* Khi hover vào input */
+.form-row input:focus {
+    border-color: #28a745;
+    outline: none; /* Bỏ viền ngoài khi focus */
+}
+
+/* Button */
+.form-container button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: auto; /* Button sẽ tự điều chỉnh theo nội dung */
+    align-self: center; /* Căn giữa button */
+    transition: background-color 0.3s ease;
+}
+
+/* Khi hover vào button */
+.form-container button:hover {
+    background-color: #218838;
+}
+
+
