@@ -228,6 +228,5 @@ def train_model():
         return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
 
 
-
 if __name__ == '__main__':
     app.run(debug=True)
