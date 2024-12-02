@@ -1,4 +1,10 @@
 from flask import Flask, render_template, request, jsonify
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import pandas as pd
+import os
+import spacy
+import pickle
 import pyodbc
 
 app = Flask(__name__)
@@ -20,6 +26,8 @@ def index():
 
 @app.route('/partials/<string:page>')
 def load_partial(page):
+    if page == "Train-Model":
+        return render_template('partials/Train-Model.html')
     if page == "ManagerDish":
         query = """
             SELECT 
@@ -117,6 +125,44 @@ def add_mon_an():
         return jsonify(success=False, message=str(e))
     finally:
         conn.close()
+
+@app.route('/update-tfidf', methods=['POST'])
+def update_tfidf():
+    import os
+    import pickle
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    import pandas as pd
+
+    try:
+        # Kết nối đến cơ sở dữ liệu
+        conn = pyodbc.connect(
+            'DRIVER={SQL Server};'
+            'SERVER=TRONG-NGHIA\\SERVER0;'
+            'DATABASE=QLMA;'
+            'Trusted_Connection=yes;'
+        )
+
+        # Lấy dữ liệu mới từ database
+        query = """exec sp_GetDataDish"""
+        data = pd.read_sql_query(query, conn)
+
+        # Xử lý TF-IDF
+        data['Text'] = data['NguyenLieu'] + ', ' + data['CachCheBien']
+        vectorizer = TfidfVectorizer(lowercase=True)
+        tfidf_matrix_db = vectorizer.fit_transform(data['Text'])
+
+        # Lưu dữ liệu mới vào file `tfidf_data.pkl`
+        tfidf_path = os.path.join(os.getcwd(), "data", "tfidf_data.pkl")
+        with open(tfidf_path, 'wb') as f:
+            pickle.dump({'vectorizer': vectorizer, 'tfidf_matrix': tfidf_matrix_db, 'data': data}, f)
+
+        conn.close()
+        return jsonify(success=True)
+
+    except Exception as e:
+        print("Lỗi khi cập nhật TF-IDF:", str(e))
+        return jsonify(success=False, message=str(e))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

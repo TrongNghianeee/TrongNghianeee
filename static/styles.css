@@ -203,4 +203,49 @@ button.model:hover {
     background-color: #218838;
 }
 
+.update-tfidf {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 50px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    width: calc(100% - 40px); /* Đảm bảo cách lề trái và phải */
+    margin-left: auto;
+    margin-right: auto;
+    background-color: #f9f9f9;
+}
+
+.update-tfidf h2 {
+    font-size: 24px;
+    margin: 0;
+}
+
+.update-tfidf p {
+    font-size: 16px;
+    margin: 0;
+}
+
+.update-tfidf button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 20px; /* Tạo khoảng cách giữa nút và văn bản */
+}
+
+.update-tfidf button:hover {
+    background-color: #0056b3;
+}
+
+.update-tfidf-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
 

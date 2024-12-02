@@ -65,3 +65,34 @@ function addMonAn() {
         });
 }
 
+// Hàm cập nhật TF-IDF
+function updateTfidf() {
+    // Hiển thị thông báo đang cập nhật
+    alert("Đang cập nhật TF-IDF...");
+
+    // Gửi yêu cầu đến server để cập nhật dữ liệu
+    fetch('/update-tfidf', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Có lỗi xảy ra trong quá trình cập nhật!');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert("Cập nhật TF-IDF thành công!");
+            } else {
+                alert("Cập nhật thất bại: " + data.message);
+            }
+        })
+        .catch(error => {
+            console.error("Lỗi:", error);
+            alert("Có lỗi xảy ra khi kết nối đến server!");
+        });
+}
+
