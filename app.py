@@ -1,13 +1,22 @@
 from flask import Flask, render_template, request, jsonify
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from spacy.training.example import Example
+from spacy.training import offsets_to_biluo_tags
 import pandas as pd
 import os
 import spacy
 import pickle
 import pyodbc
+import csv
+import random
 
 app = Flask(__name__)
+
+# Đường dẫn tệp dữ liệu và nơi lưu model
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, "data", "train-model-data.csv")
+MODEL_PATH = os.path.join(BASE_DIR, "food_recognition3_model")
 
 # Kết nối cơ sở dữ liệu
 conn = pyodbc.connect(
@@ -18,11 +27,40 @@ conn = pyodbc.connect(
 )
 cursor = conn.cursor()
 
+# Hàm loại bỏ thực thể trùng lặp
+def remove_duplicates(entities):
+    return list(set(entities))  # Loại bỏ trùng lặp bằng cách chuyển thành set rồi chuyển lại list
+
+# Hàm kiểm tra và loại bỏ thực thể chồng lấn
+def remove_overlaps(entities):
+    sorted_entities = sorted(entities, key=lambda x: (x[0], x[1]))  # Sắp xếp thực thể theo vị trí
+    non_overlapping = []
+    for ent in sorted_entities:
+        if not non_overlapping or ent[0] >= non_overlapping[-1][1]:  # Kiểm tra chồng lấn
+            non_overlapping.append(ent)
+    return non_overlapping
+
+# Hàm chuyển đổi dữ liệu CSV sang định dạng của spaCy
+def convert_csv_to_spacy_format(file_path):
+    train_data = []
+    with open(file_path, newline='', encoding='utf-8-sig') as csvfile:
+        reader = csv.DictReader(csvfile, delimiter='\t')  # Sử dụng tab làm phân tách
+        for row in reader:
+            text = row["Sentence"]
+            try:
+                entities = eval(row["Entities"])  # Chuyển chuỗi thành list
+                entities_list = [(ent['start'], ent['end'], ent['label']) for ent in entities]
+                entities_list = remove_duplicates(entities_list)  # Loại bỏ thực thể trùng lặp
+                entities_list = remove_overlaps(entities_list)  # Loại bỏ chồng lấn
+                train_data.append((text, {"entities": entities_list}))
+            except Exception as e:
+                print(f"Error processing row: {row}")
+                print(f"Error: {e}")
+    return train_data
 
 @app.route('/')
 def index():
     return render_template('index.html')
-
 
 @app.route('/partials/<string:page>')
 def load_partial(page):
@@ -128,11 +166,6 @@ def add_mon_an():
 
 @app.route('/update-tfidf', methods=['POST'])
 def update_tfidf():
-    import os
-    import pickle
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    import pandas as pd
-
     try:
         # Kết nối đến cơ sở dữ liệu
         conn = pyodbc.connect(
@@ -162,6 +195,38 @@ def update_tfidf():
     except Exception as e:
         print("Lỗi khi cập nhật TF-IDF:", str(e))
         return jsonify(success=False, message=str(e))
+
+# Endpoint huấn luyện model
+@app.route('/train-model', methods=['POST'])
+def train_model():
+    try:
+        # Load dữ liệu từ file CSV
+        train_data = convert_csv_to_spacy_format(DATA_PATH)
+
+        # Tạo model spaCy
+        nlp = spacy.blank("vi")
+        ner = nlp.add_pipe("ner", last=True)
+        ner.add_label("NGUYEN_LIEU")
+        ner.add_label("CACH_CHE_BIEN")
+
+        optimizer = nlp.begin_training()
+
+        # Huấn luyện model
+        for itn in range(10):
+            print(f"Epoch {itn + 1} bắt đầu...")
+            random.shuffle(train_data)
+            for text, annotations in train_data:
+                doc = nlp.make_doc(text)
+                example = Example.from_dict(doc, annotations)
+                nlp.update([example], drop=0.5)
+            print(f"Epoch {itn + 1} hoàn thành.")
+
+        # Lưu model
+        nlp.to_disk(MODEL_PATH)
+        return jsonify({"success": True, "message": "Huấn luyện hoàn tất. Model đã được lưu!"})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
+
 
 
 if __name__ == '__main__':

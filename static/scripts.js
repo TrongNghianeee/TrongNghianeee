@@ -96,3 +96,26 @@ function updateTfidf() {
         });
 }
 
+function trainModel() {
+    // Hiển thị thông báo khi quá trình huấn luyện bắt đầu
+    alert("Huấn luyện model... Vui lòng đợi.");
+
+    fetch('/train-model', {
+        method: 'POST',
+    })
+        .then(response => response.json())  // Nhận dữ liệu JSON từ server
+        .then(data => {
+            // Hiển thị thông báo thành công hoặc lỗi bằng alert
+            if (data.success) {
+                alert(`Thành công: ${data.message}`);  // Thông báo thành công
+            } else {
+                alert(`Lỗi: ${data.message}`);  // Thông báo lỗi
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Có lỗi xảy ra khi kết nối với server!');  // Thông báo lỗi khi không kết nối được server
+        });
+}
+
+

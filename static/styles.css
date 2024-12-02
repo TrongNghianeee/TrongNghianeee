@@ -203,7 +203,15 @@ button.model:hover {
     background-color: #218838;
 }
 
-.update-tfidf {
+#output {
+    height: 150px;
+    resize: vertical;
+    background-color: #f9f9f9;
+    color: #333;
+    padding: 10px;
+}
+
+.shared-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -212,23 +220,23 @@ button.model:hover {
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-    width: calc(100% - 40px); /* Đảm bảo cách lề trái và phải */
+    width: calc(100% - 40px);
     margin-left: auto;
     margin-right: auto;
     background-color: #f9f9f9;
 }
 
-.update-tfidf h2 {
+.shared-container h2 {
     font-size: 24px;
     margin: 0;
 }
 
-.update-tfidf p {
+.shared-container p {
     font-size: 16px;
     margin: 0;
 }
 
-.update-tfidf button {
+.shared-container button {
     background-color: #007bff;
     color: white;
     padding: 10px 20px;
@@ -236,16 +244,27 @@ button.model:hover {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    margin-left: 20px; /* Tạo khoảng cách giữa nút và văn bản */
+    margin-left: 20px;
+    
+    /* Đảm bảo button có kích thước cố định */
+    min-width: 150px; /* Đặt độ rộng tối thiểu */
+    height: 40px; /* Đặt chiều cao cố định */
+    
+    display: flex;
+    justify-content: center; /* Căn giữa theo chiều ngang */
+    align-items: center; /* Căn giữa theo chiều dọc */
+    
+    white-space: nowrap; /* Ngăn chữ xuống dòng */
+    overflow: hidden; /* Ẩn chữ nếu quá dài */
+    text-overflow: ellipsis; /* Thêm dấu "..." nếu chữ vượt quá độ rộng */
 }
 
-.update-tfidf button:hover {
+.shared-container button:hover {
     background-color: #0056b3;
 }
 
-.update-tfidf-left {
+.shared-container-left {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
 }
-
