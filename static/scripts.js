@@ -118,3 +118,23 @@ function trainModel() {
         });
 }
 
+// viet function update-data-train de update du lieu train
+function updateDataTrain() {
+    alert("Đang cập nhật dữ liệu train... Vui lòng đợi.");
+
+    fetch('/update-data-train', {
+        method: 'POST',
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Thành công: ${data.message}`);
+            } else {
+                alert(`Lỗi: ${data.message}`);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Có lỗi xảy ra khi kết nối với server!');
+        });
+}

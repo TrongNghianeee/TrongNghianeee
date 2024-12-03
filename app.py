@@ -10,6 +10,8 @@ import pickle
 import pyodbc
 import csv
 import random
+import json
+import re
 
 app = Flask(__name__)
 
@@ -196,7 +198,6 @@ def update_tfidf():
         print("Lỗi khi cập nhật TF-IDF:", str(e))
         return jsonify(success=False, message=str(e))
 
-# Endpoint huấn luyện model
 @app.route('/train-model', methods=['POST'])
 def train_model():
     try:
@@ -227,6 +228,77 @@ def train_model():
     except Exception as e:
         return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
 
+@app.route('/update-data-train', methods=['POST'])
+def update_data_train():
+    try:
+        # Kết nối đến cơ sở dữ liệu
+        conn = pyodbc.connect(
+            'DRIVER={SQL Server};'
+            'SERVER=TRONG-NGHIA\\SERVER0;'
+            'DATABASE=QLMA;'
+            'Trusted_Connection=yes;'
+        )
+        
+        nguyenlieu_query = "SELECT n.Ten FROM tb_NguyenLieu AS n"
+        nguyenlieu_df = pd.read_sql(nguyenlieu_query, conn)
+        # Truy vấn danh sách cách chế biến từ bảng tb_Cachchebien
+        cachchebien_query = "SELECT c.Ten FROM tb_Cachchebien AS c"
+        cachchebien_df = pd.read_sql(cachchebien_query, conn)
+
+        # Chuẩn hóa về dạng chữ thường và chuyển thành danh sách
+        nguyenlieu_list = [normalize_text(item) for item in nguyenlieu_df['Ten']]
+        cachchebien_list = [normalize_text(item) for item in cachchebien_df['Ten']]
+        
+        conn.close()
+
+        file_path = "data/raw-data-train.txt"  # Đường dẫn tới file txt
+        with open(file_path, "r", encoding="utf-8") as file:
+            sentences = [normalize_text(line) for line in file.readlines()]
+        
+        # Tạo DataFrame từ danh sách các câu
+        df = pd.DataFrame(sentences, columns=["Sentence"])
+
+        # Áp dụng hàm để trích xuất thông tin và tạo cột "Entities"
+        df["Entities"] = df["Sentence"].apply(
+            lambda sentence: extract_positions(sentence, nguyenlieu_list, cachchebien_list)
+        )
+
+        # Chuyển danh sách thành chuỗi JSON để đảm bảo định dạng chính xác
+        df["Entities"] = df["Entities"].apply(lambda x: json.dumps(x, ensure_ascii=False))
+
+        # Lưu DataFrame thành file CSV với mã hóa UTF-8
+        output_file = "data/train-model-data.csv"
+        df.to_csv(output_file, index=False, sep="\t", encoding="utf-8-sig")
+        
+        return jsonify({"success": True, "message": "Dữ liệu đã được cập nhật!"})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
+              
+def extract_positions(sentence, nguyenlieu_list, cachchebien_list):
+    positions = []
+    
+    # Xử lý nguyên liệu
+    for entity in nguyenlieu_list:
+        start_index = sentence.lower().find(entity.lower())
+        if start_index != -1:
+            end_index = start_index + len(entity)
+            positions.append({"start": start_index, "end": end_index, "label": "NGUYEN_LIEU"})
+    
+    # Xử lý cách chế biến
+    for technique in cachchebien_list:
+        start_index = sentence.lower().find(technique.lower())
+        if start_index != -1:
+            end_index = start_index + len(technique)
+            positions.append({"start": start_index, "end": end_index, "label": "CACH_CHE_BIEN"})
+    
+    return positions      
+
+def normalize_text(text):
+    # Viết thường
+    text = text.lower()
+    # Loại bỏ khoảng trắng dư ở đầu/đuôi và chuyển khoảng trắng dư giữa các từ thành một khoảng trắng
+    text = re.sub(r'\s+', ' ', text.strip())
+    return text
 
 if __name__ == '__main__':
     app.run(debug=True)
