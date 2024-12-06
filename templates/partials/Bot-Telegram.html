@@ -1,12 +1,18 @@
 <div class="shared-container">
     <div class="shared-container-left">
-        <h2>Kích hoạt bot Telegram</h2>
+        <h2>
+            Kích hoạt bot Telegram
+            <!-- Thêm hình ảnh bên cạnh tiêu đề -->
+            <a href="https://t.me/Suggests_dishes_bot" target="_blank">
+                <img src="static/img/link.png" alt="Telegram Bot" class="bot-link-img">
+            </a>
+        </h2>
         <p>Bật bot Telegram</p>
     </div>
     <button id="toggle-bot-btn" class="btn" onclick="toggleBot()">Run Bot</button>
 </div>
 
-<script>
+<!-- <script>
 function toggleBot() {
     fetch("/toggle-bot", {
         method: "POST",
@@ -26,4 +32,4 @@ function toggleBot() {
     })
     .catch(error => console.error("Error:", error));
 }
-</script>
+</script> -->

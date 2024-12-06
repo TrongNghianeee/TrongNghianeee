@@ -332,6 +332,7 @@ def normalize_text(text):
 
 # Hàm nhận diện nhãn từ input người dùng
 def extract_labels(user_input):
+    nlp = spacy.load("food_recognition3_model")
     doc = nlp(user_input)
     nguyenLieu = [ent.text for ent in doc.ents if ent.label_ == "NGUYEN_LIEU"]
     cachCheBien = [ent.text for ent in doc.ents if ent.label_ == "CACH_CHE_BIEN"]

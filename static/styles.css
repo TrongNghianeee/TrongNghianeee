@@ -268,3 +268,18 @@ button.model:hover {
     flex-direction: column;
     align-items: flex-start;
 }
+
+/* Đặt hình ảnh ngay sát tiêu đề mà không bị lệch */
+.bot-link-img {
+    height: 1em; /* Đặt chiều cao hình ảnh bằng với chiều cao font chữ */
+    width: auto; /* Giữ tỷ lệ hình ảnh */
+    margin-left: 8px; /* Khoảng cách giữa hình ảnh và tiêu đề */
+    vertical-align: middle; /* Căn giữa hình ảnh với văn bản */
+    display: inline-block; /* Đảm bảo hình ảnh và tiêu đề nằm trong cùng một dòng */
+}
+
+/* Thêm hiệu ứng khi hover vào hình ảnh */
+.bot-link-img:hover {
+    opacity: 0.5; /* Giảm độ sáng khi hover vào hình ảnh */
+}
+
