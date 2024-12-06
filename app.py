@@ -180,6 +180,9 @@ def add_mon_an():
             cursor.execute("INSERT INTO tb_ChitietMonan (MonAnID, NguyenLieuID) VALUES (?, ?)", mon_an_id, nguyen_lieu_id)
 
         conn.commit()
+        # Lấy dữ liệu từ database
+        query = """exec sp_GetDataDish"""
+        data = pd.read_sql_query(query, conn)
         return jsonify(success=True)
 
     except Exception as e:
@@ -191,6 +194,7 @@ def add_mon_an():
 @app.route('/update-tfidf', methods=['POST'])
 def update_tfidf():
     try:
+        global vectorizer, tfidf_matrix_db, data
         # Kết nối đến cơ sở dữ liệu
         conn = pyodbc.connect(
             'DRIVER={SQL Server};'
@@ -212,6 +216,10 @@ def update_tfidf():
         tfidf_path = os.path.join(os.getcwd(), "artifacts", "tfidf_data.pkl")
         with open(tfidf_path, 'wb') as f:
             pickle.dump({'vectorizer': vectorizer, 'tfidf_matrix': tfidf_matrix_db, 'data': data}, f)
+        
+        vectorizer = tfidf_data['vectorizer']
+        tfidf_matrix_db = tfidf_data['tfidf_matrix']
+        data = tfidf_data['data']
 
         conn.close()
         return jsonify(success=True)
@@ -334,7 +342,7 @@ def suggest_dish(user_input):
     # Nhận diện nhãn từ input
     nguyenLieu, cachCheBien = extract_labels(user_input)
     query = ", ".join(nguyenLieu + cachCheBien)
-    
+       
     if query:
         # Vectorize input và tính cosine similarity
         tfidf_vector_user = vectorizer.transform([query])
@@ -370,6 +378,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Hàm khởi động bot
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Xin chào! Hãy gửi tin nhắn để tôi gợi ý món ăn dựa trên nguyên liệu và cách chế biến của bạn.")
+    
+def reload_tfidf_data():
+    # Đọc lại tfidf_data.pkl để cập nhật các biến toàn cục
+    with open('artifacts/tfidf_data.pkl', 'rb') as f:
+        tfidf_data = joblib.load(f)
+        
+    global vectorizer, tfidf_matrix_db, data
+    vectorizer = tfidf_data['vectorizer']
+    tfidf_matrix_db = tfidf_data['tfidf_matrix']
+    data = tfidf_data['data']
 
 def run_bot():
     global bot_running
@@ -379,6 +397,8 @@ def run_bot():
     
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    reload_tfidf_data()
     
     # Tạo event loop mới cho thread con này
     loop = asyncio.new_event_loop()
