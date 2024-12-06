@@ -138,3 +138,27 @@ function updateDataTrain() {
             alert('Có lỗi xảy ra khi kết nối với server!');
         });
 }
+
+function toggleBot() {
+    fetch("/toggle-bot", {
+        method: "POST",
+    })
+    .then(response => response.json())
+    .then(data => {
+        const button = document.getElementById("toggle-bot-btn");
+        if (data.bot_running) {
+            button.textContent = "Running";
+            button.className = "btn running";
+            alert("Bot đã được bật và đang chạy!");
+        } else {
+            button.textContent = "Run Bot";
+            button.className = "btn stopped";
+            alert("Bot đã tắt.");
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Có lỗi xảy ra khi thực hiện yêu cầu.");
+    });
+}
+

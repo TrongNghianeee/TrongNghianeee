@@ -1,0 +1,29 @@
+<div class="shared-container">
+    <div class="shared-container-left">
+        <h2>Kích hoạt bot Telegram</h2>
+        <p>Bật bot Telegram</p>
+    </div>
+    <button id="toggle-bot-btn" class="btn" onclick="toggleBot()">Run Bot</button>
+</div>
+
+<script>
+function toggleBot() {
+    fetch("/toggle-bot", {
+        method: "POST",
+    })
+    .then(response => response.json())
+    .then(data => {
+        const button = document.getElementById("toggle-bot-btn");
+        if (data.bot_running) {
+            button.textContent = "Bot is running";
+            button.className = "btn running";
+            alert("Bot is now running");
+        } else {
+            button.textContent = "Run Bot";
+            button.className = "btn stopped";
+            alert("Bot has been stopped");
+        }
+    })
+    .catch(error => console.error("Error:", error));
+}
+</script>

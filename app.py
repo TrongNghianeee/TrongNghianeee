@@ -3,6 +3,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from spacy.training.example import Example
 from spacy.training import offsets_to_biluo_tags
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import telebot
 import pandas as pd
 import os
 import spacy
@@ -12,6 +15,9 @@ import csv
 import random
 import json
 import re
+import joblib
+import threading
+import asyncio
 
 app = Flask(__name__)
 
@@ -19,6 +25,11 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "train-model-data.csv")
 MODEL_PATH = os.path.join(BASE_DIR, "food_recognition3_model")
+
+nlp = spacy.load("food_recognition3_model")
+# Load TF-IDF data
+with open('artifacts/tfidf_data.pkl', 'rb') as f:
+    tfidf_data = joblib.load(f)
 
 # Kết nối cơ sở dữ liệu
 conn = pyodbc.connect(
@@ -28,6 +39,15 @@ conn = pyodbc.connect(
     'Trusted_Connection=yes;'
 )
 cursor = conn.cursor()
+
+# Lấy dữ liệu từ database
+query = """exec sp_GetDataDish"""
+data = pd.read_sql_query(query, conn)
+
+# Lấy lại vectorizer, TF-IDF matrix và dữ liệu gốc
+vectorizer = tfidf_data['vectorizer']
+tfidf_matrix_db = tfidf_data['tfidf_matrix']
+data = tfidf_data['data']
 
 # Hàm loại bỏ thực thể trùng lặp
 def remove_duplicates(entities):
@@ -66,6 +86,8 @@ def index():
 
 @app.route('/partials/<string:page>')
 def load_partial(page):
+    if page == "Bot-Telegram":
+        return render_template('partials/Bot-Telegram.html')
     if page == "Train-Model":
         return render_template('partials/Train-Model.html')
     if page == "ManagerDish":
@@ -187,7 +209,7 @@ def update_tfidf():
         tfidf_matrix_db = vectorizer.fit_transform(data['Text'])
 
         # Lưu dữ liệu mới vào file `tfidf_data.pkl`
-        tfidf_path = os.path.join(os.getcwd(), "data", "tfidf_data.pkl")
+        tfidf_path = os.path.join(os.getcwd(), "artifacts", "tfidf_data.pkl")
         with open(tfidf_path, 'wb') as f:
             pickle.dump({'vectorizer': vectorizer, 'tfidf_matrix': tfidf_matrix_db, 'data': data}, f)
 
@@ -299,6 +321,99 @@ def normalize_text(text):
     # Loại bỏ khoảng trắng dư ở đầu/đuôi và chuyển khoảng trắng dư giữa các từ thành một khoảng trắng
     text = re.sub(r'\s+', ' ', text.strip())
     return text
+
+# Hàm nhận diện nhãn từ input người dùng
+def extract_labels(user_input):
+    doc = nlp(user_input)
+    nguyenLieu = [ent.text for ent in doc.ents if ent.label_ == "NGUYEN_LIEU"]
+    cachCheBien = [ent.text for ent in doc.ents if ent.label_ == "CACH_CHE_BIEN"]
+    return nguyenLieu, cachCheBien
+
+# Hàm gợi ý món ăn và lấy nguyên liệu
+def suggest_dish(user_input):
+    # Nhận diện nhãn từ input
+    nguyenLieu, cachCheBien = extract_labels(user_input)
+    query = ", ".join(nguyenLieu + cachCheBien)
+    
+    if query:
+        # Vectorize input và tính cosine similarity
+        tfidf_vector_user = vectorizer.transform([query])
+        similarity_scores = cosine_similarity(tfidf_vector_user, tfidf_matrix_db)
+        top_indices = similarity_scores.argsort()[0][-5:][::-1]  # Top 5 món ăn
+        
+        # Trả về danh sách món ăn
+        suggestions = []
+        for idx in top_indices:
+            dish = data.iloc[idx]
+            suggestions.append((dish['MonAn'], dish['CachCheBien'], dish['NguyenLieu']))
+        return suggestions
+    return None
+
+# Hàm xử lý tin nhắn
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_message = update.message.text
+    print(f"User input: {user_message}")
+    
+    # Gợi ý món ăn
+    suggestions = suggest_dish(user_message)
+    
+    if suggestions:
+        response = "Top 5 món ăn gợi ý:\n"
+        for idx, (dish, recipe, ingredients) in enumerate(suggestions, 1):
+            response += f"{idx}. {dish}\n   Cách chế biến: {recipe}\n   Nguyên liệu: {ingredients}\n"
+    else:
+        response = "Xin lỗi, tôi không nhận diện được nguyên liệu hoặc cách chế biến từ tin nhắn của bạn."
+    
+    # Phản hồi lại người dùng
+    await update.message.reply_text(response)
+
+# Hàm khởi động bot
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Xin chào! Hãy gửi tin nhắn để tôi gợi ý món ăn dựa trên nguyên liệu và cách chế biến của bạn.")
+
+def run_bot():
+    global bot_running
+    bot_running = True
+    TELEGRAM_API_TOKEN = "7595143737:AAGp-DATccxWD0-RZyoS6A1ru3E0kEoVmas"
+    application = Application.builder().token(TELEGRAM_API_TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # Tạo event loop mới cho thread con này
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    # Chạy bot Telegram với event loop asyncio
+    loop.run_until_complete(application.run_polling())
+
+def stop_bot():
+    global bot_running
+    if bot_running:
+        # Dừng vòng lặp bot
+        bot_running = False
+        print("Bot đã được tắt.")
+        # Nếu có cơ chế tắt thread của bot, dùng nó ở đây
+        # Ví dụ: application.stop() hoặc một cách tắt khác
+        if bot_thread:
+            bot_thread.join()  # Chờ bot thread kết thúc
+
+# Biến lưu trữ trạng thái bot
+bot_thread = None
+bot_running = False
+
+@app.route('/toggle-bot', methods=['POST'])
+def toggle_bot():
+    global bot_running, bot_thread
+    if bot_running:
+        # Dừng bot
+        stop_bot()
+        return jsonify({'bot_running': False})
+    else:
+        # Bật bot
+        bot_thread = threading.Thread(target=run_bot)
+        bot_thread.start()
+        return jsonify({'bot_running': True})
 
 if __name__ == '__main__':
     app.run(debug=True)
