@@ -332,11 +332,21 @@ def normalize_text(text):
 
 # Hàm nhận diện nhãn từ input người dùng
 def extract_labels(user_input):
+    # Chuyển đổi đầu vào thành chữ thường
+    user_input = user_input.lower()
+    
+    # Tải mô hình spaCy
     nlp = spacy.load("food_recognition3_model")
+    
+    # Xử lý văn bản
     doc = nlp(user_input)
+    
+    # Tìm kiếm các thực thể với nhãn tương ứng
     nguyenLieu = [ent.text for ent in doc.ents if ent.label_ == "NGUYEN_LIEU"]
     cachCheBien = [ent.text for ent in doc.ents if ent.label_ == "CACH_CHE_BIEN"]
+    
     return nguyenLieu, cachCheBien
+
 
 # Hàm gợi ý món ăn và lấy nguyên liệu
 def suggest_dish(user_input):
