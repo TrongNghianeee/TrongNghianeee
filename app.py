@@ -62,7 +62,6 @@ def remove_overlaps(entities):
             non_overlapping.append(ent)
     return non_overlapping
 
-# Hàm chuyển đổi dữ liệu CSV sang định dạng của spaCy
 def convert_csv_to_spacy_format(file_path):
     train_data = []
     with open(file_path, newline='', encoding='utf-8-sig') as csvfile:
@@ -80,12 +79,142 @@ def convert_csv_to_spacy_format(file_path):
                 print(f"Error: {e}")
     return train_data
 
+def extract_positions(sentence, nguyenlieu_list, cachchebien_list):
+    positions = []
+    
+    # Xử lý nguyên liệu
+    for entity in nguyenlieu_list:
+        start_index = sentence.lower().find(entity.lower())
+        if start_index != -1:
+            end_index = start_index + len(entity)
+            positions.append({"start": start_index, "end": end_index, "label": "NGUYEN_LIEU"})
+    
+    # Xử lý cách chế biến
+    for technique in cachchebien_list:
+        start_index = sentence.lower().find(technique.lower())
+        if start_index != -1:
+            end_index = start_index + len(technique)
+            positions.append({"start": start_index, "end": end_index, "label": "CACH_CHE_BIEN"})
+    
+    return positions      
+
+def normalize_text(text):
+    # Viết thường
+    text = text.lower()
+    # Loại bỏ khoảng trắng dư ở đầu/đuôi và chuyển khoảng trắng dư giữa các từ thành một khoảng trắng
+    text = re.sub(r'\s+', ' ', text.strip())
+    return text
+
+def extract_labels(user_input):
+    user_input = user_input.lower()
+    
+    # Tải mô hình spaCy
+    nlp = spacy.load("food_recognition3_model")
+    doc = nlp(user_input)
+    
+    # Tìm kiếm các thực thể với nhãn tương ứng
+    nguyenLieu = [ent.text for ent in doc.ents if ent.label_ == "NGUYEN_LIEU"]
+    cachCheBien = [ent.text for ent in doc.ents if ent.label_ == "CACH_CHE_BIEN"]
+    
+    return nguyenLieu, cachCheBien
+
+def suggest_dish(user_input):
+    global vectorizer, tfidf_matrix_db, data
+    
+    with open('artifacts/tfidf_data.pkl', 'rb') as f:
+        tfidf_data = joblib.load(f)
+        
+    nguyenLieu, cachCheBien = extract_labels(user_input)
+    query = ", ".join(nguyenLieu + cachCheBien)
+    vectorizer = tfidf_data['vectorizer']
+    tfidf_matrix_db = tfidf_data['tfidf_matrix']
+    data = tfidf_data['data']
+       
+    if query:
+        # Vectorize input và tính cosine similarity
+        tfidf_vector_user = vectorizer.transform([query])
+        similarity_scores = cosine_similarity(tfidf_vector_user, tfidf_matrix_db)
+        top_indices = similarity_scores.argsort()[0][-5:][::-1]  # Top 5 món ăn
+        
+        # Trả về danh sách món ăn
+        suggestions = []
+        for idx in top_indices:
+            dish = data.iloc[idx]
+            suggestions.append((dish['MonAn'], dish['CachCheBien'], dish['NguyenLieu']))
+        return suggestions
+    return None
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_message = update.message.text
+    print(f"User input: {user_message}")
+    
+    # Gợi ý món ăn
+    suggestions = suggest_dish(user_message)
+    
+    if suggestions:
+        response = "Top 5 món ăn gợi ý:\n"
+        for idx, (dish, recipe, ingredients) in enumerate(suggestions, 1):
+            response += f"{idx}. {dish}\n   Cách chế biến: {recipe}\n   Nguyên liệu: {ingredients}\n"
+    else:
+        response = "Xin lỗi, tôi không nhận diện được nguyên liệu hoặc cách chế biến từ tin nhắn của bạn."
+    
+    # Phản hồi lại người dùng
+    await update.message.reply_text(response)
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Xin chào! Hãy gửi tin nhắn để tôi gợi ý món ăn dựa trên nguyên liệu và cách chế biến của bạn.")
+    
+def reload_tfidf_data():
+    # Đọc lại tfidf_data.pkl để cập nhật các biến toàn cục
+    with open('artifacts/tfidf_data.pkl', 'rb') as f:
+        tfidf_data = joblib.load(f)
+        
+    global vectorizer, tfidf_matrix_db, data
+    vectorizer = tfidf_data['vectorizer']
+    tfidf_matrix_db = tfidf_data['tfidf_matrix']
+    data = tfidf_data['data']
+
+def run_bot():
+    global bot_running
+    bot_running = True
+    TELEGRAM_API_TOKEN = "7595143737:AAGp-DATccxWD0-RZyoS6A1ru3E0kEoVmas"
+    application = Application.builder().token(TELEGRAM_API_TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    reload_tfidf_data()
+    
+    # Tạo event loop mới cho thread con này
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    # Chạy bot Telegram với event loop asyncio
+    loop.run_until_complete(application.run_polling())
+
+def stop_bot():
+    global bot_running
+    if bot_running:
+        # Dừng vòng lặp bot
+        bot_running = False
+        print("Bot đã được tắt.")
+        # Nếu có cơ chế tắt thread của bot, dùng nó ở đây
+        # Ví dụ: application.stop() hoặc một cách tắt khác
+        if bot_thread:
+            bot_thread.join()  # Chờ bot thread kết thúc
+
+# Biến lưu trữ trạng thái bot
+bot_thread = None
+bot_running = False
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/partials/<string:page>')
 def load_partial(page):
+    if page == "Setting":
+        return render_template('partials/Setting.html')
     if page == "Bot-Telegram":
         return render_template('partials/Bot-Telegram.html')
     if page == "Train-Model":
@@ -271,29 +400,25 @@ def update_data_train():
         
         nguyenlieu_query = "SELECT n.Ten FROM tb_NguyenLieu AS n"
         nguyenlieu_df = pd.read_sql(nguyenlieu_query, conn)
-        # Truy vấn danh sách cách chế biến từ bảng tb_Cachchebien
+
         cachchebien_query = "SELECT c.Ten FROM tb_Cachchebien AS c"
         cachchebien_df = pd.read_sql(cachchebien_query, conn)
 
-        # Chuẩn hóa về dạng chữ thường và chuyển thành danh sách
         nguyenlieu_list = [normalize_text(item) for item in nguyenlieu_df['Ten']]
         cachchebien_list = [normalize_text(item) for item in cachchebien_df['Ten']]
         
         conn.close()
 
-        file_path = "data/raw-data-train.txt"  # Đường dẫn tới file txt
+        file_path = "data/raw-data-train.txt" 
         with open(file_path, "r", encoding="utf-8") as file:
             sentences = [normalize_text(line) for line in file.readlines()]
-        
-        # Tạo DataFrame từ danh sách các câu
+
         df = pd.DataFrame(sentences, columns=["Sentence"])
 
-        # Áp dụng hàm để trích xuất thông tin và tạo cột "Entities"
         df["Entities"] = df["Sentence"].apply(
             lambda sentence: extract_positions(sentence, nguyenlieu_list, cachchebien_list)
         )
 
-        # Chuyển danh sách thành chuỗi JSON để đảm bảo định dạng chính xác
         df["Entities"] = df["Entities"].apply(lambda x: json.dumps(x, ensure_ascii=False))
 
         # Lưu DataFrame thành file CSV với mã hóa UTF-8
@@ -304,135 +429,6 @@ def update_data_train():
     except Exception as e:
         return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
               
-def extract_positions(sentence, nguyenlieu_list, cachchebien_list):
-    positions = []
-    
-    # Xử lý nguyên liệu
-    for entity in nguyenlieu_list:
-        start_index = sentence.lower().find(entity.lower())
-        if start_index != -1:
-            end_index = start_index + len(entity)
-            positions.append({"start": start_index, "end": end_index, "label": "NGUYEN_LIEU"})
-    
-    # Xử lý cách chế biến
-    for technique in cachchebien_list:
-        start_index = sentence.lower().find(technique.lower())
-        if start_index != -1:
-            end_index = start_index + len(technique)
-            positions.append({"start": start_index, "end": end_index, "label": "CACH_CHE_BIEN"})
-    
-    return positions      
-
-def normalize_text(text):
-    # Viết thường
-    text = text.lower()
-    # Loại bỏ khoảng trắng dư ở đầu/đuôi và chuyển khoảng trắng dư giữa các từ thành một khoảng trắng
-    text = re.sub(r'\s+', ' ', text.strip())
-    return text
-
-# Hàm nhận diện nhãn từ input người dùng
-def extract_labels(user_input):
-    # Chuyển đổi đầu vào thành chữ thường
-    user_input = user_input.lower()
-    
-    # Tải mô hình spaCy
-    nlp = spacy.load("food_recognition3_model")
-    
-    # Xử lý văn bản
-    doc = nlp(user_input)
-    
-    # Tìm kiếm các thực thể với nhãn tương ứng
-    nguyenLieu = [ent.text for ent in doc.ents if ent.label_ == "NGUYEN_LIEU"]
-    cachCheBien = [ent.text for ent in doc.ents if ent.label_ == "CACH_CHE_BIEN"]
-    
-    return nguyenLieu, cachCheBien
-
-
-# Hàm gợi ý món ăn và lấy nguyên liệu
-def suggest_dish(user_input):
-    # Nhận diện nhãn từ input
-    nguyenLieu, cachCheBien = extract_labels(user_input)
-    query = ", ".join(nguyenLieu + cachCheBien)
-       
-    if query:
-        # Vectorize input và tính cosine similarity
-        tfidf_vector_user = vectorizer.transform([query])
-        similarity_scores = cosine_similarity(tfidf_vector_user, tfidf_matrix_db)
-        top_indices = similarity_scores.argsort()[0][-5:][::-1]  # Top 5 món ăn
-        
-        # Trả về danh sách món ăn
-        suggestions = []
-        for idx in top_indices:
-            dish = data.iloc[idx]
-            suggestions.append((dish['MonAn'], dish['CachCheBien'], dish['NguyenLieu']))
-        return suggestions
-    return None
-
-# Hàm xử lý tin nhắn
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text
-    print(f"User input: {user_message}")
-    
-    # Gợi ý món ăn
-    suggestions = suggest_dish(user_message)
-    
-    if suggestions:
-        response = "Top 5 món ăn gợi ý:\n"
-        for idx, (dish, recipe, ingredients) in enumerate(suggestions, 1):
-            response += f"{idx}. {dish}\n   Cách chế biến: {recipe}\n   Nguyên liệu: {ingredients}\n"
-    else:
-        response = "Xin lỗi, tôi không nhận diện được nguyên liệu hoặc cách chế biến từ tin nhắn của bạn."
-    
-    # Phản hồi lại người dùng
-    await update.message.reply_text(response)
-
-# Hàm khởi động bot
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Xin chào! Hãy gửi tin nhắn để tôi gợi ý món ăn dựa trên nguyên liệu và cách chế biến của bạn.")
-    
-def reload_tfidf_data():
-    # Đọc lại tfidf_data.pkl để cập nhật các biến toàn cục
-    with open('artifacts/tfidf_data.pkl', 'rb') as f:
-        tfidf_data = joblib.load(f)
-        
-    global vectorizer, tfidf_matrix_db, data
-    vectorizer = tfidf_data['vectorizer']
-    tfidf_matrix_db = tfidf_data['tfidf_matrix']
-    data = tfidf_data['data']
-
-def run_bot():
-    global bot_running
-    bot_running = True
-    TELEGRAM_API_TOKEN = "7595143737:AAGp-DATccxWD0-RZyoS6A1ru3E0kEoVmas"
-    application = Application.builder().token(TELEGRAM_API_TOKEN).build()
-    
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    reload_tfidf_data()
-    
-    # Tạo event loop mới cho thread con này
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    # Chạy bot Telegram với event loop asyncio
-    loop.run_until_complete(application.run_polling())
-
-def stop_bot():
-    global bot_running
-    if bot_running:
-        # Dừng vòng lặp bot
-        bot_running = False
-        print("Bot đã được tắt.")
-        # Nếu có cơ chế tắt thread của bot, dùng nó ở đây
-        # Ví dụ: application.stop() hoặc một cách tắt khác
-        if bot_thread:
-            bot_thread.join()  # Chờ bot thread kết thúc
-
-# Biến lưu trữ trạng thái bot
-bot_thread = None
-bot_running = False
-
 @app.route('/toggle-bot', methods=['POST'])
 def toggle_bot():
     global bot_running, bot_thread
