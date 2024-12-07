@@ -162,3 +162,19 @@ function toggleBot() {
     });
 }
 
+function addUserInputData() {
+    fetch('/add-user-input-data', {
+        method: 'POST',
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('Cập nhật dữ liệu thành công!');
+        } else {
+            alert('Có lỗi xảy ra khi cập nhật dữ liệu.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Có lỗi xảy ra khi gửi yêu cầu.');
+    });
+}

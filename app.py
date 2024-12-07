@@ -116,6 +116,9 @@ def extract_labels(user_input):
     nguyenLieu = [ent.text for ent in doc.ents if ent.label_ == "NGUYEN_LIEU"]
     cachCheBien = [ent.text for ent in doc.ents if ent.label_ == "CACH_CHE_BIEN"]
     
+    with open("data/raw-data-user.txt", "a", encoding="utf-8") as file:
+        file.write(user_input + "\n")
+    
     return nguyenLieu, cachCheBien
 
 def suggest_dish(user_input):
@@ -386,6 +389,30 @@ def train_model():
         return jsonify({"success": True, "message": "Huấn luyện hoàn tất. Model đã được lưu!"})
     except Exception as e:
         return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
+
+@app.route('/add-user-input-data', methods=['POST'])
+def add_user_input():
+    try:
+        # Đường dẫn tệp dữ liệu
+        raw_data_user_file = 'data/raw-data-user.txt'
+        raw_data_train_file = 'data/raw-data-train.txt'
+
+        # Đọc toàn bộ dữ liệu từ raw-data-user.txt
+        with open(raw_data_user_file, 'r', encoding='utf-8') as user_file:
+            user_data = user_file.readlines()
+
+        # Ghi dữ liệu vào cuối raw-data-train.txt
+        with open(raw_data_train_file, 'a', encoding='utf-8') as train_file:
+            train_file.writelines(user_data)
+
+        # Xóa toàn bộ dữ liệu trong raw-data-user.txt
+        with open(raw_data_user_file, 'w', encoding='utf-8') as user_file:
+            user_file.write('')
+
+        return jsonify({'message': 'Data updated successfully'}), 200
+    except Exception as e:
+        print(f'Error: {e}')
+        return jsonify({'message': 'An error occurred'}), 500
 
 @app.route('/update-data-train', methods=['POST'])
 def update_data_train():
